@@ -58,8 +58,26 @@ class WritebackViewSqlTest {
         String sql = RolapCube.renderWritebackUnionArms(new AnsiDialect(), writebackTable(), List.of(row));
         assertThat(sql)
             .startsWith(" union all ")
-            .contains("select \"units\" as \"c0\", \"store_id\" as \"c1\" from \"wb_fact\" as \"wb_fact\"")
+            .contains("select \"units\" as \"units\", \"store_id\" as \"store_id\" from \"wb_fact\" as \"wb_fact\"")
             .contains("union all select 42 as \"units\", 's1' as \"store_id\"");
+    }
+
+    /**
+     * The view replaces the fact under the fact's alias, and the outer query keeps referencing
+     * the fact's original column names - so every arm must expose exactly those names, never
+     * generated {@code c0..cN} aliases.
+     */
+    @Test
+    void armsExposeOriginalColumnNames() {
+        String sql = RolapCube.renderWritebackUnionArms(new AnsiDialect(), writebackTable(), List.of());
+        assertThat(sql).doesNotContainPattern("as \"c\\d+\"");
+    }
+
+    @Test
+    void factArmExposesOriginalColumnNames() {
+        String sql = org.eclipse.daanse.rolap.common.SqlRender
+            .render(RolapCube.writebackColumnsArm(writebackTable(), null, "fact"), new AnsiDialect()).sql();
+        assertThat(sql).isEqualTo("select \"units\" as \"units\", \"store_id\" as \"store_id\" from \"fact\" as \"fact\"");
     }
 
     /** A writeback table owned by a schema renders schema-qualified, aliased by the bare name. */
