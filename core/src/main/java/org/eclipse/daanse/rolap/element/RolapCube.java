@@ -2738,13 +2738,17 @@ public abstract class RolapCube extends CubeBase {
     }
 
     /** One {@code select <writeback columns> from <table>} arm of the writeback fact view —
-     *  schema-qualified when the table carries one; the alias stays the bare table name. */
+     *  schema-qualified when the table carries one; the alias stays the bare table name.
+     *  Each column keeps its own name as alias: the derived fact table must expose the
+     *  original column names, because the outer query references them. */
     static org.eclipse.daanse.sql.statement.api.model.Statement writebackColumnsArm(
             RolapWritebackTable writebackTable, String schema, String table) {
         org.eclipse.daanse.sql.statement.api.SelectStatementBuilder q =
             org.eclipse.daanse.sql.statement.api.SelectStatementBuilder.create();
         for (org.eclipse.daanse.rolap.common.writeback.RolapWritebackColumn c : writebackTable.getColumns()) {
-            q.project(org.eclipse.daanse.sql.statement.api.Expressions.column(c.getColumn().getName()), null);
+            String name = c.getColumn().getName();
+            q.project(org.eclipse.daanse.sql.statement.api.Expressions.column(name), null,
+                org.eclipse.daanse.sql.statement.api.model.ColumnAlias.of(name));
         }
         q.from(org.eclipse.daanse.sql.statement.api.From.table(
             org.eclipse.daanse.sql.statement.api.From.tableRef(schema, table),
